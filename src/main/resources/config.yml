@@ -1,0 +1,25 @@
+kits:
+  miner:
+    name: "Miner"
+    armor:
+      - IRON_HELMET
+      - IRON_CHESTPLATE
+      - IRON_LEGGINGS
+      - IRON_BOOTS
+    effects:
+      FIRE_RESISTANCE:
+        - 0
+      FAST_DIGGING:
+        - 1
+      NIGHT_VISION:
+        - 0
+  explorer:
+    name: "Explorer"
+    armor:
+      - LEATHER_HELMET
+      - LEATHER_CHESTPLATE
+      - LEATHER_LEGGINGS
+      - LEATHER_BOOTS
+    effects:
+      SPEED:
+        - 1
