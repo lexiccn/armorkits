@@ -1,6 +1,7 @@
 package me.sudura.armorkits;
 
 import com.destroystokyo.paper.event.player.PlayerArmorChangeEvent;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -11,23 +12,29 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 
 public class ArmorListener implements Listener {
     private final NamespacedKey currentKit;
-    static final HashMap<String, Material[]> kitMaterials = new HashMap<>();
-    static final HashMap<String, PotionEffect[]> kitEffects = new HashMap<>();
+    static final HashMap<String, ArrayList<Material>> kitMaterials = new HashMap<>();
+    static final HashMap<String, ArrayList<PotionEffect>> kitEffects = new HashMap<>();
 
     public ArmorListener(ArmorKits instance) {
         currentKit = new NamespacedKey(instance, "currentKit");
-
-        kitMaterials.put("explorer", new Material[]{Material.getMaterial("LEATHER_BOOTS"), Material.getMaterial("LEATHER_LEGGINGS"), Material.getMaterial("LEATHER_CHESTPLATE"), Material.getMaterial("LEATHER_HELMET")});
-        kitEffects.put("explorer", new PotionEffect[]{new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1)});
-
-        kitMaterials.put("miner", new Material[]{Material.getMaterial("IRON_BOOTS"), Material.getMaterial("IRON_LEGGINGS"), Material.getMaterial("IRON_CHESTPLATE"), Material.getMaterial("IRON_HELMET")});
-        kitEffects.put("miner", new PotionEffect[]{new PotionEffect(PotionEffectType.FAST_DIGGING, Integer.MAX_VALUE, 1), new PotionEffect(PotionEffectType.NIGHT_VISION, Integer.MAX_VALUE, 0), new PotionEffect(PotionEffectType.FIRE_RESISTANCE, Integer.MAX_VALUE, 0)});
+        for (String kit : instance.getConfig().getConfigurationSection("kits").getKeys(false)) {
+            kitMaterials.put(kit, new ArrayList<>());
+            for (String mat : instance.getConfig().getStringList("kits."+kit+".materials")) {
+                kitMaterials.get(kit).add(Material.getMaterial(mat));
+            }
+            kitEffects.put(kit, new ArrayList<>());
+            for (Map.Entry<String, Object> effect : instance.getConfig().getConfigurationSection("kits."+kit+".effects").getValues(false).entrySet()) {
+                kitEffects.get(kit).add(new PotionEffect(PotionEffectType.getByName(effect.getKey()), Integer.MAX_VALUE, (Integer)effect.getValue()));
+            }
+        }
     }
 
     public static String figureOutKit(Player p){
@@ -38,36 +45,38 @@ public class ArmorListener implements Listener {
             n++;
         }
 
-        for(Map.Entry<String, Material[]> kit : kitMaterials.entrySet()) {
-            if (armor[0].equals(kit.getValue()[0]) && armor[1].equals(kit.getValue()[1]) && armor[2].equals(kit.getValue()[2]) && armor[3].equals(kit.getValue()[3])) return kit.getKey();
+        for(Map.Entry<String, ArrayList<Material>> kit : kitMaterials.entrySet()) {
+            //Feel like this can be done better with a loop
+            if (armor[0].equals(kit.getValue().get(3)) && armor[1].equals(kit.getValue().get(2)) && armor[2].equals(kit.getValue().get(1)) && armor[3].equals(kit.getValue().get(0))) return kit.getKey();
         }
         return null;
     }
 
     @EventHandler
     public void onChangeArmor (PlayerArmorChangeEvent event) {
-        if (event.getOldItem() != null && event.getNewItem() != null && event.getOldItem().getType() == event.getNewItem().getType()) {
+        if (event.getOldItem() != null && event.getNewItem() != null && event.getOldItem().getType().equals(event.getNewItem().getType())) {
             //They're the same; no need to handle anything
             return;
         }
 
         Player p = event.getPlayer();
-        //Get the PDC value; remove the effects
         String kit = p.getPersistentDataContainer().get(currentKit, PersistentDataType.STRING);
-        if (kit != null) {
-            p.sendMessage("Unequipped "+kit+" kit!");
-            p.getPersistentDataContainer().remove(currentKit);
-            for (PotionEffect eff : kitEffects.get(kit)) {
-                p.removePotionEffect(eff.getType());
+        String newKit = figureOutKit(p);
+
+        if (!Objects.equals(kit, newKit)) {
+            if (kit != null) {
+                p.sendMessage("Unequipped "+ChatColor.RED+kit+ChatColor.RESET+" kit!");
+                p.getPersistentDataContainer().remove(currentKit);
+                for (PotionEffect eff : kitEffects.get(kit)) {
+                    p.removePotionEffect(eff.getType());
+                }
             }
-        }
-        //Set the PDC value; add the effects
-        kit = figureOutKit(p);
-        if (kit != null) {
-            p.sendMessage("Equipped "+kit+" kit!");
-            p.getPersistentDataContainer().set(currentKit, PersistentDataType.STRING, kit);
-            for (PotionEffect eff : kitEffects.get(kit)) {
-                p.addPotionEffect(eff);
+            if (newKit != null) {
+                p.sendMessage("Equipped "+ChatColor.GREEN+newKit+ChatColor.RESET+" kit!");
+                p.getPersistentDataContainer().set(currentKit, PersistentDataType.STRING, newKit);
+                for (PotionEffect eff : kitEffects.get(newKit)) {
+                    p.addPotionEffect(eff);
+                }
             }
         }
     }
