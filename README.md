@@ -10,7 +10,7 @@ Armour Kits must be made up of 4 pieces or "AIR" for empty slot; no wildcards
 Players can only have one "kit" at a time; which due to above limitation is irrelevant
 
 
-#Configuration:<br/>
+Configuration:<br/>
 kitname:<br/>
   materials:<br/>
     - ANY<br/>
